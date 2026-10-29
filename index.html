@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ilm Dost</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #eef3ef;
+            color: #20382c;
+        }
+
+        .chat-app {
+            max-width: 700px;
+            margin: 30px auto;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .subtitle {
+            color: #627167;
+        }
+
+        #messages {
+            height: 350px;
+            overflow-y: auto;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #d5dfd7;
+            border-radius: 10px;
+        }
+
+        .message {
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .user {
+            background: #e0efdf;
+            margin-left: 30px;
+        }
+
+        .bot {
+            background: #f0f2f0;
+            margin-right: 30px;
+        }
+
+        form {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 14px;
+            border: 1px solid #b8c8bc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 20px;
+            background: #276447;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1b4933;
+        }
+
+        .note {
+            font-size: 13px;
+            color: #627167;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="chat-app">
+        <h1>Ilm Dost</h1>
+        <p class="subtitle">Your learning companion</p>
+       <button id="new-chat" type="button">New chat</button>
+        <div id="messages" role="log" aria-live="polite">
+            <div class="message bot">
+                Ilm Dost: Hello! Try sending a message.
+            </div>
+        </div>
+
+        <form id="chat-form">
+            <input
+                id="user-input"
+                type="text"
+                placeholder="Type your question..."
+                aria-label="Your message"
+                maxlength="1000"
+                autocomplete="off"
+                required
+            >
+            <button type="submit">Send</button>
+        </form>
+
+ <p class="note">
+
+</p>
+    </main>
+
+    <script>
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("user-input");
+    const messages = document.getElementById("messages");
+    const sendButton = form.querySelector("button");
+
+   let conversationHistory = [];
+   let waitingForReply = false;
+const newChatButton = document.getElementById("new-chat");
+
+newChatButton.addEventListener("click", function () {
+    if (waitingForReply) {
+        return;
+    }
+
+    conversationHistory = [];
+    messages.replaceChildren();
+
+    addMessage(
+        "Ilm Dost: A new conversation has started. What would you like to learn?",
+        "bot"
+    );
+
+    input.value = "";
+    input.focus();
+});
+
+    function addMessage(text, sender) {
+        const message = document.createElement("div");
+
+        message.classList.add("message", sender);
+        message.textContent = text;
+
+        messages.appendChild(message);
+        messages.scrollTop = messages.scrollHeight;
+
+        return message;
+    }
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const userMessage = input.value.trim();
+
+        if (userMessage === "" || waitingForReply) {
+            return;
+        }
+
+        addMessage("You: " + userMessage, "user");
+        input.value = "";
+
+        waitingForReply = true;
+        sendButton.disabled = true;
+        sendButton.textContent = "Sending...";
+
+        const replyBox = addMessage(
+            "Ilm Dost: Waiting for Python...",
+            "bot"
+        );
+
+        try {
+            const response = await fetch("/chat", {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                  body: JSON.stringify({
+                     message: userMessage,
+                     history: conversationHistory
+                      })
+               
+            });
+
+            const data = await response.json();
+
+if (!response.ok) {
+    replyBox.textContent =
+        "Ilm Dost: " + (data.error || "Something went wrong.");
+} else {
+    replyBox.textContent = "Ilm Dost: " + data.reply;
+
+    conversationHistory.push(
+        { role: "user", content: userMessage },
+        { role: "assistant", content: data.reply }
+    );
+
+    // Keep the latest five question-and-answer pairs.
+    conversationHistory = conversationHistory.slice(-10);
+}
+
+        } catch (error) {
+            replyBox.textContent =
+                "Ilm Dost: Could not get a reply. "
+                + "Check that your Python server is running, "
+                + "then try again.";
+
+            console.error(error);
+
+        } finally {
+            waitingForReply = false;
+            sendButton.disabled = false;
+            sendButton.textContent = "Send";
+
+            messages.scrollTop = messages.scrollHeight;
+            input.focus();
+        }
+    });
+</script>
+</body>
+</html>
